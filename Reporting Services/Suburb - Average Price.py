@@ -40,7 +40,7 @@ def getAverages(table):
     print("Median: ", medianjohnsonville)
     print("Average: ", averagejohnsonville, "\n")
 
-tables = ['johnsonville', 'khandallah']
+tables = ['johnsonville', 'khandallah', 'newlands']
 for table in tables:
     tablename = table.capitalize()
     print(tablename)

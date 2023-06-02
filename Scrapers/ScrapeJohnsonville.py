@@ -22,15 +22,15 @@ db = mysql.connector.connect(
 # Uses the Edge webdriver
 webdriver_service = Service('C:/Local/WebDriver/113.0.1774.57/msedgedriver.exe')
 edge_options = Options()
-edge_options.add_argument("--headless")  # Run Edge in headless mode, without opening a window
-edge_options.add_argument("--log-level=3")  # Suppress console output
+edge_options.add_argument("--headless")
+edge_options.add_argument("--log-level=3")
 driver = webdriver.Edge(service=webdriver_service, options=edge_options)
 url = "https://www.trademe.co.nz/a/property/residential/sale/wellington/wellington/johnsonville"
 driver.get(url)
 time.sleep(5)
 html_content = driver.page_source
 
-# Parse HTML by class, store all <a> tags in links[]
+# Parse HTML by class, store all the links
 soup = BeautifulSoup(html_content, "html.parser")
 tiles = "l-col l-col--has-flex-contents ng-star-inserted"
 elements = soup.find_all(class_=tiles)
@@ -60,17 +60,16 @@ for navlinks in pagebaselinks:
     navlink = navlinks.get("href")
     navigationlinks.append(navlink)
 
-# Move onto the next page
+# Append pagelinks with additional properties from other navigation pages
 for navlinks in navigationlinks:
     navurl = "https://www.trademe.co.nz/a/property/residential/sale/wellington/wellington/johnsonville" + navlinks
     driver.get(navurl)
     time.sleep(5)
     html_content = driver.page_source
-
-    # Parse HTML by class, store all <a> tags in links[]
     soup = BeautifulSoup(html_content, "html.parser")
     tiles = "l-col l-col--has-flex-contents ng-star-inserted"
     elements = soup.find_all(class_=tiles)
+
     # Property links on current page
     for element in elements:
         a_tags = element.find_all("a")
@@ -125,6 +124,7 @@ for link in pagelinks:
 
     # If the property record doesn't exist
     if len(propertyrecord) == 0:
+
         # Create the new property record
         cursor = db.cursor()
         query = "INSERT INTO propertylist_johnsonville SET addr = %s, suburb = %s, region = %s, city = %s, price = %s, active = 1"
@@ -132,6 +132,7 @@ for link in pagelinks:
         cursor.execute(query, val)
         db.commit()
         cursor.close()
+
         # Create the new property record ID
         cursor = db.cursor()
         query = "SELECT * FROM propertylist_johnsonville WHERE addr = %s AND suburb = %s AND region = %s AND city = %s"
@@ -139,6 +140,7 @@ for link in pagelinks:
         cursor.execute(query, val)
         newrecord = cursor.fetchall()
         cursor.close()
+
         # Create the new active listing record
         cursor = db.cursor()
         query = "INSERT INTO active_listings_johnsonville SET propid = %s, price = %s, link = %s, lastscan = %s"
@@ -152,6 +154,7 @@ for link in pagelinks:
 
         # Set the property to active
         if propertyrecord[0][6] == 0:
+
             # Only update the last scan time
             cursor = db.cursor()
             query = "UPDATE propertylist_johnsonville SET active = 1 WHERE id = %s"
@@ -171,8 +174,9 @@ for link in pagelinks:
         # If there is an active listing
         if len(activerecord) > 0:
 
-            # If this listing is the same as the active listing
+            # If price and link are the same
             if activerecord[0][2] == price and activerecord[0][3] == link:
+
                 # Only update the last scan time
                 cursor = db.cursor()
                 query = "UPDATE active_listings_johnsonville SET lastscan = %s WHERE id = %s"
@@ -181,7 +185,7 @@ for link in pagelinks:
                 db.commit()
                 cursor.close()
 
-            # If this is a new listing
+            # Re-listed properties
             else:
                 # Create the new active listing record
                 cursor = db.cursor()
@@ -190,6 +194,7 @@ for link in pagelinks:
                 cursor.execute(query, val)
                 db.commit()
                 cursor.close()
+
                 # Move the current active into the prior record table
                 cursor = db.cursor()
                 query = "INSERT INTO prior_listings_johnsonville SET propid = %s, price = %s, link = %s, timeadded = %s"
@@ -197,6 +202,7 @@ for link in pagelinks:
                 cursor.execute(query, val)
                 db.commit()
                 cursor.close()
+
                 # Delete the old one active one
                 cursor = db.cursor()
                 query = "DELETE FROM active_listings_johnsonville WHERE id = %s"
@@ -207,6 +213,7 @@ for link in pagelinks:
 
         # If there is no active listing
         elif len(activerecord) == 0:
+
             # Create the new active listing record
             cursor = db.cursor()
             query = "INSERT INTO active_listings_johnsonville SET propid = %s, price = %s, link = %s, lastscan = %s"
