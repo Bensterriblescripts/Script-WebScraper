@@ -81,7 +81,6 @@ for navlinks in navigationlinks:
         slicedlink = pagelink[:index]
         proplink = url + slicedlink
         pagelinks.append(proplink)
-        print(proplink)
 
 # Loop through each property page
 for link in pagelinks:
@@ -215,18 +214,6 @@ for link in pagelinks:
             cursor.execute(query, val)
             db.commit()
             cursor.close()
-
-# Move onto the next page
-for navlinks in navigationlinks:
-    navurl = link + navlinks
-    driver.get(url)
-    time.sleep(5)
-    html_content = driver.page_source
-
-    # Parse HTML by class, store all <a> tags in links[]
-    soup = BeautifulSoup(html_content, "html.parser")
-    tiles = "l-col l-col--has-flex-contents ng-star-inserted"
-    elements = soup.find_all(class_=tiles)
 
 driver.quit()
 db.close()
