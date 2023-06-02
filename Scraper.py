@@ -1,7 +1,6 @@
 from bs4 import BeautifulSoup
 import mysql.connector
 import time
-import re
 import os
 
 from selenium import webdriver
@@ -17,7 +16,7 @@ db = mysql.connector.connect(
     host = "localhost",
     user = sqluser,
     password = sqlpass,
-    database = "prod_proplistings"
+    database = "prod_proplist"
 )
 
 # Uses the Edge webdriver
@@ -81,17 +80,100 @@ for link in pagelinks:
         price = "Not Listed" 
         print("Price not listed")
 
-    # Add to the scantable
-    try:
-        currenttime = time.time()
+    # Get any existing property record
+    cursor = db.cursor()
+    query = "SELECT * FROM propertylist_johnsonville WHERE addr = %s AND suburb = %s AND region = %s AND city = %s"
+    val = (address, suburb, region, city)
+    cursor.execute(query, val)
+    propertyrecord = cursor.fetchall()
+    cursor.close()
+
+    # If the property record doesn't exist
+    if len(propertyrecord) == 0:
+        # Create the new property record
         cursor = db.cursor()
-        query = "INSERT INTO scan_trademe_johnsonville SET addr = %s, suburb = %s, region = %s, city = %s, price = %s, link = %s, lastscan = %s"
-        val = (address, suburb, region, city, price, link, currenttime)
+        query = "INSERT INTO propertylist_johnsonville SET addr = %s, suburb = %s, region = %s, city = %s, price = %s, active = 1"
+        val = (address, suburb, region, city, price)
         cursor.execute(query, val)
         db.commit()
         cursor.close()
-    except Exception as e:
-        print("Error:", e)
+        # Create the new property record ID
+        cursor = db.cursor()
+        query = "SELECT * FROM propertylist_johnsonville WHERE addr = %s AND suburb = %s AND region = %s AND city = %s"
+        val = (address, suburb, region, city)
+        cursor.execute(query, val)
+        newrecord = cursor.fetchall()
+        cursor.close()
+        # Create the new active listing record
+        currenttime = time.time()
+        cursor = db.cursor()
+        query = "INSERT INTO active_listings_johnsonville SET propid = %s, price = %s, link = %s, lastscan = %s"
+        val = (newrecord[0][0], price, link, currenttime)
+        cursor.execute(query, val)
+        db.commit()
+        cursor.close()
+
+    # If the property is known
+    elif len(propertyrecord) > 0:
+
+        # Get the active listing (if there is one)
+        cursor = db.cursor()
+        query = "SELECT * FROM active_listings_johnsonville WHERE propid = %s"
+        val = (propertyrecord[0][0],)
+        cursor.execute(query, val)
+        activerecord = cursor.fetchall()
+        cursor.close()
+
+        # If there is an active listing
+        if len(activerecord) > 0:
+            # If this listing is the same
+            if activerecord[0][2] == price and activerecord[0][3] == link:
+                # Only update the last scan time
+                currenttime = time.time()
+                cursor = db.cursor()
+                query = "UPDATE active_listings_johnsonville WHERE id = %s SET lastscan = %s"
+                val = (activerecord[0][0], currenttime)
+                cursor.execute(query, val)
+                db.commit()
+                cursor.close()
+
+            # If this is a new listing
+            else:
+                # Create the new active listing record
+                currenttime = time.time()
+                cursor = db.cursor()
+                query = "INSERT INTO active_listings_johnsonville SET propid = %s, price = %s, link = %s, lastscan = %s"
+                val = (activerecord[0][1], price, link, currenttime)
+                cursor.execute(query, val)
+                db.commit()
+                cursor.close()
+                # Move the current active into the prior record table
+                currenttime = time.time()
+                cursor = db.cursor()
+                query = "INSERT INTO prior_listings_johnsonville SET propid = %s, price = %s, link = %s, timeadded = %s"
+                val = (activerecord[0][1], price, link, currenttime)
+                cursor.execute(query, val)
+                db.commit()
+                cursor.close()
+                # Delete the old one active one
+                currenttime = time.time()
+                cursor = db.cursor()
+                query = "DELETE FROM active_listings_johnsonville WHERE id = %s"
+                val = (activerecord[0][0],)
+                cursor.execute(query, val)
+                db.commit()
+                cursor.close()
+
+        # If there is no active listing
+        elif len(activerecord) == 0:
+            # Create the new active listing record
+            currenttime = time.time()
+            cursor = db.cursor()
+            query = "INSERT INTO active_listings_johnsonville SET propid = %s, price = %s, link = %s, lastscan = %s"
+            val = (propertyrecord[0][1], price, link, currenttime)
+            cursor.execute(query, val)
+            db.commit()
+            cursor.close()
 
 
 driver.quit()
