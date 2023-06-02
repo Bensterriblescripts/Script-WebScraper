@@ -50,6 +50,7 @@ for link in baselinks:
 
 # Loop through each property page
 for link in pagelinks:
+    currenttime = time.time()
     print(link)
     driver.get(link)
     time.sleep(5)
@@ -105,7 +106,6 @@ for link in pagelinks:
         newrecord = cursor.fetchall()
         cursor.close()
         # Create the new active listing record
-        currenttime = time.time()
         cursor = db.cursor()
         query = "INSERT INTO active_listings_johnsonville SET propid = %s, price = %s, link = %s, lastscan = %s"
         val = (newrecord[0][0], price, link, currenttime)
@@ -115,6 +115,16 @@ for link in pagelinks:
 
     # If the property is known
     elif len(propertyrecord) > 0:
+
+        # Set the property to active
+        if propertyrecord[0][6] == 0:
+            # Only update the last scan time
+            cursor = db.cursor()
+            query = "UPDATE propertylist_johnsonville SET active = 1 WHERE id = %s"
+            val = (propertyrecord[0][0],)
+            cursor.execute(query, val)
+            db.commit()
+            cursor.close()
 
         # Get the active listing (if there is one)
         cursor = db.cursor()
@@ -126,13 +136,13 @@ for link in pagelinks:
 
         # If there is an active listing
         if len(activerecord) > 0:
-            # If this listing is the same
+
+            # If this listing is the same as the active listing
             if activerecord[0][2] == price and activerecord[0][3] == link:
                 # Only update the last scan time
-                currenttime = time.time()
                 cursor = db.cursor()
-                query = "UPDATE active_listings_johnsonville WHERE id = %s SET lastscan = %s"
-                val = (activerecord[0][0], currenttime)
+                query = "UPDATE active_listings_johnsonville SET lastscan = %s WHERE id = %s"
+                val = (currenttime, activerecord[0][0])
                 cursor.execute(query, val)
                 db.commit()
                 cursor.close()
@@ -140,7 +150,6 @@ for link in pagelinks:
             # If this is a new listing
             else:
                 # Create the new active listing record
-                currenttime = time.time()
                 cursor = db.cursor()
                 query = "INSERT INTO active_listings_johnsonville SET propid = %s, price = %s, link = %s, lastscan = %s"
                 val = (activerecord[0][1], price, link, currenttime)
@@ -148,7 +157,6 @@ for link in pagelinks:
                 db.commit()
                 cursor.close()
                 # Move the current active into the prior record table
-                currenttime = time.time()
                 cursor = db.cursor()
                 query = "INSERT INTO prior_listings_johnsonville SET propid = %s, price = %s, link = %s, timeadded = %s"
                 val = (activerecord[0][1], price, link, currenttime)
@@ -156,7 +164,6 @@ for link in pagelinks:
                 db.commit()
                 cursor.close()
                 # Delete the old one active one
-                currenttime = time.time()
                 cursor = db.cursor()
                 query = "DELETE FROM active_listings_johnsonville WHERE id = %s"
                 val = (activerecord[0][0],)
@@ -167,14 +174,12 @@ for link in pagelinks:
         # If there is no active listing
         elif len(activerecord) == 0:
             # Create the new active listing record
-            currenttime = time.time()
             cursor = db.cursor()
             query = "INSERT INTO active_listings_johnsonville SET propid = %s, price = %s, link = %s, lastscan = %s"
             val = (propertyrecord[0][1], price, link, currenttime)
             cursor.execute(query, val)
             db.commit()
             cursor.close()
-
 
 driver.quit()
 db.close()
