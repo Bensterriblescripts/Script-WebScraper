@@ -176,11 +176,10 @@ for link in pagelinks:
             # Create the new active listing record
             cursor = db.cursor()
             query = "INSERT INTO active_listings_johnsonville SET propid = %s, price = %s, link = %s, lastscan = %s"
-            val = (propertyrecord[0][1], price, link, currenttime)
+            val = (propertyrecord[0][0], price, link, currenttime)
             cursor.execute(query, val)
             db.commit()
             cursor.close()
 
 driver.quit()
 db.close()
-
