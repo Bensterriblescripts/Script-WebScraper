@@ -49,6 +49,6 @@ if len(oldrecord) != 0:
         db.commit()
         cursor.close()
 else: 
-    print("No records to update")
+    print("No records to clean")
 
 db.close()
