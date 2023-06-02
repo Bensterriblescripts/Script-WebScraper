@@ -32,14 +32,14 @@ html_content = driver.page_source
 
 # Parse HTML by class, store all <a> tags in links[]
 soup = BeautifulSoup(html_content, "html.parser")
-class_name = "l-col l-col--has-flex-contents ng-star-inserted"
-elements = soup.find_all(class_=class_name)
+tiles = "l-col l-col--has-flex-contents ng-star-inserted"
+elements = soup.find_all(class_=tiles)
+
+# Property links on current page
 baselinks = []
 for element in elements:
     a_tags = element.find_all("a")
     baselinks.extend(a_tags)
-
-# Get the href, then remove the query string from the URL
 pagelinks = []
 for link in baselinks:
     pagelink = link.get("href")
@@ -47,6 +47,41 @@ for link in baselinks:
     slicedlink = pagelink[:index]
     proplink = url + slicedlink
     pagelinks.append(proplink)
+
+# Navigation page links
+pages = "o-pagination__nav-item ng-star-inserted"
+pageelements = soup.find_all(class_=pages)
+pagebaselinks = []
+for pageelement in pageelements:
+    a_tags = pageelement.find_all("a")
+    pagebaselinks.extend(a_tags)
+navigationlinks = []
+for navlinks in pagebaselinks:
+    navlink = navlinks.get("href")
+    navigationlinks.append(navlink)
+
+# Move onto the next page
+for navlinks in navigationlinks:
+    navurl = "https://www.trademe.co.nz/a/property/residential/sale/wellington/wellington/johnsonville" + navlinks
+    driver.get(navurl)
+    time.sleep(5)
+    html_content = driver.page_source
+
+    # Parse HTML by class, store all <a> tags in links[]
+    soup = BeautifulSoup(html_content, "html.parser")
+    tiles = "l-col l-col--has-flex-contents ng-star-inserted"
+    elements = soup.find_all(class_=tiles)
+    # Property links on current page
+    for element in elements:
+        a_tags = element.find_all("a")
+        baselinks.extend(a_tags)
+    for link in baselinks:
+        pagelink = link.get("href")
+        index = pagelink.find("?")
+        slicedlink = pagelink[:index]
+        proplink = url + slicedlink
+        pagelinks.append(proplink)
+        print(proplink)
 
 # Loop through each property page
 for link in pagelinks:
@@ -180,6 +215,18 @@ for link in pagelinks:
             cursor.execute(query, val)
             db.commit()
             cursor.close()
+
+# Move onto the next page
+for navlinks in navigationlinks:
+    navurl = link + navlinks
+    driver.get(url)
+    time.sleep(5)
+    html_content = driver.page_source
+
+    # Parse HTML by class, store all <a> tags in links[]
+    soup = BeautifulSoup(html_content, "html.parser")
+    tiles = "l-col l-col--has-flex-contents ng-star-inserted"
+    elements = soup.find_all(class_=tiles)
 
 driver.quit()
 db.close()
