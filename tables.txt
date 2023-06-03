@@ -1,8 +1,0 @@
-active_listings_johnsonville
-id, propid, price, link, lastscan, 
-
-prior_listings_johnsonville
-id, propid, price, link, lastscan
-
-propertylist_johnsonville:
-id, addr, suburb, region, city, price, active
