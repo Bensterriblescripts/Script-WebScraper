@@ -4,7 +4,6 @@ import time
 import os
 from selenium import webdriver
 from selenium.webdriver.edge.service import Service
-from selenium.webdriver.common.by import By
 from selenium.webdriver.edge.options import Options
 
 # DB
@@ -138,12 +137,12 @@ for link in pagelinks:
         # Create the new property record
         query = "INSERT INTO propertylist_johnsonville SET addr = %s, suburb = %s, region = %s, city = %s, price = %s, active = 1"
         val = (address, suburb, region, city, price)
-        newrecord = changerecords(query, val)
+        changerecords(query, val)
 
         # Create the new property record ID
         query = "SELECT * FROM propertylist_johnsonville WHERE addr = %s AND suburb = %s AND region = %s AND city = %s"
         val = (address, suburb, region, city)
-        getrecords(query, val)
+        newrecord = getrecords(query, val)
 
         # Create the new active listing record
         query = "INSERT INTO active_listings_johnsonville SET propid = %s, price = %s, link = %s, lastscan = %s"
@@ -169,30 +168,20 @@ for link in pagelinks:
         # If there is an active listing
         if len(activerecord) > 0:
 
-            # If this listing is the same as the active listing
-            if activerecord[0][2] == price and activerecord[0][3] == link:
+            # Known listings
+            if activerecord[0][3] == link:
 
                 # Only update the last scan time
                 query = "UPDATE active_listings_johnsonville SET lastscan = %s WHERE id = %s"
                 val = (currenttime, activerecord[0][0])
                 changerecords(query, val)
 
-            # If this is a new listing
+            # New listings
             else:
                 # Create the new active listing record
                 query = "INSERT INTO active_listings_johnsonville SET propid = %s, price = %s, link = %s, lastscan = %s"
                 val = (activerecord[0][1], price, link, currenttime)
                 changerecords(query,val)
-
-                # Move the current active into the prior record table
-                query = "INSERT INTO prior_listings_johnsonville SET propid = %s, price = %s, link = %s, timeadded = %s"
-                val = (activerecord[0][1], price, link, currenttime)
-                changerecords(query, val)
-
-                # Delete the old one active one
-                query = "DELETE FROM active_listings_johnsonville WHERE id = %s"
-                val = (activerecord[0][0],)
-                changerecords(query, val)
 
         # If there is no active listing
         elif len(activerecord) == 0:
@@ -201,6 +190,33 @@ for link in pagelinks:
             query = "INSERT INTO active_listings_johnsonville SET propid = %s, price = %s, link = %s, lastscan = %s"
             val = (propertyrecord[0][0], price, link, currenttime)
             changerecords(query, val)
+
+# Get existing listings older than 24 hours
+currenttime = time.time()
+query = "SELECT * FROM active_listings_johnsonville WHERE lastscan < %s"
+val = ((currenttime - 86400),)
+oldrecord = getrecords(query, val)
+if len(oldrecord) != 0:
+    for record in oldrecord:
+
+        # Move the current active into the prior record table
+        cursor = db.cursor()
+        query = "INSERT INTO prior_listings_johnsonville SET propid = %s, price = %s, link = %s, timeadded = %s"
+        val = (record[1], record[2], record[3], currenttime)
+        cursor.execute(query, val)
+        db.commit()
+        cursor.close()
+
+        # Delete the old active one
+        cursor = db.cursor()
+        query = "DELETE FROM active_listings_johnsonville WHERE id = %s"
+        val = (record[0],)
+        cursor.execute(query, val)
+        db.commit()
+        cursor.close()
+
+else: 
+    print("No records to clean")
 
 driver.quit()
 db.close()
