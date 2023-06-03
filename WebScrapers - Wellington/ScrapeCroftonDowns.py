@@ -24,7 +24,7 @@ edge_options = Options()
 edge_options.add_argument("--headless")
 edge_options.add_argument("--log-level=3")
 driver = webdriver.Edge(service=webdriver_service, options=edge_options)
-url = "https://www.trademe.co.nz/a/property/residential/sale/wellington/wellington/newtown"
+url = "https://www.trademe.co.nz/a/property/residential/sale/wellington/wellington/rongotai"
 driver.get(url)
 time.sleep(5)
 html_content = driver.page_source
@@ -61,7 +61,7 @@ for navlinks in pagebaselinks:
 
 # Move onto the next page
 for navlinks in navigationlinks:
-    navurl = "https://www.trademe.co.nz/a/property/residential/sale/wellington/wellington/newtown" + navlinks
+    navurl = "https://www.trademe.co.nz/a/property/residential/sale/wellington/wellington/rongotai" + navlinks
     driver.get(navurl)
     time.sleep(5)
     html_content = driver.page_source
@@ -115,7 +115,7 @@ for link in pagelinks:
 
     # Get any existing property record
     cursor = db.cursor()
-    query = "SELECT * FROM propertylist_newtown WHERE addr = %s AND suburb = %s AND region = %s AND city = %s"
+    query = "SELECT * FROM propertylist_rongotai WHERE addr = %s AND suburb = %s AND region = %s AND city = %s"
     val = (address, suburb, region, city)
     cursor.execute(query, val)
     propertyrecord = cursor.fetchall()
@@ -126,7 +126,7 @@ for link in pagelinks:
 
         # Create the new property record
         cursor = db.cursor()
-        query = "INSERT INTO propertylist_newtown SET addr = %s, suburb = %s, region = %s, city = %s, price = %s, active = 1"
+        query = "INSERT INTO propertylist_rongotai SET addr = %s, suburb = %s, region = %s, city = %s, price = %s, active = 1"
         val = (address, suburb, region, city, price)
         cursor.execute(query, val)
         db.commit()
@@ -134,7 +134,7 @@ for link in pagelinks:
 
         # Create the new property record ID
         cursor = db.cursor()
-        query = "SELECT * FROM propertylist_newtown WHERE addr = %s AND suburb = %s AND region = %s AND city = %s"
+        query = "SELECT * FROM propertylist_rongotai WHERE addr = %s AND suburb = %s AND region = %s AND city = %s"
         val = (address, suburb, region, city)
         cursor.execute(query, val)
         newrecord = cursor.fetchall()
@@ -142,7 +142,7 @@ for link in pagelinks:
 
         # Create the new active listing record
         cursor = db.cursor()
-        query = "INSERT INTO active_listings_newtown SET propid = %s, price = %s, link = %s, lastscan = %s"
+        query = "INSERT INTO active_listings_rongotai SET propid = %s, price = %s, link = %s, lastscan = %s"
         val = (newrecord[0][0], price, link, currenttime)
         cursor.execute(query, val)
         db.commit()
@@ -156,7 +156,7 @@ for link in pagelinks:
 
             # Set the property to active
             cursor = db.cursor()
-            query = "UPDATE propertylist_newtown SET active = 1 WHERE id = %s"
+            query = "UPDATE propertylist_rongotai SET active = 1 WHERE id = %s"
             val = (propertyrecord[0][0],)
             cursor.execute(query, val)
             db.commit()
@@ -164,7 +164,7 @@ for link in pagelinks:
 
         # Get the active listing (if there is one)
         cursor = db.cursor()
-        query = "SELECT * FROM active_listings_newtown WHERE propid = %s"
+        query = "SELECT * FROM active_listings_rongotai WHERE propid = %s"
         val = (propertyrecord[0][0],)
         cursor.execute(query, val)
         activerecord = cursor.fetchall()
@@ -178,7 +178,7 @@ for link in pagelinks:
 
                 # Only update the last scan time
                 cursor = db.cursor()
-                query = "UPDATE active_listings_newtown SET lastscan = %s WHERE id = %s"
+                query = "UPDATE active_listings_rongotai SET lastscan = %s WHERE id = %s"
                 val = (currenttime, activerecord[0][0])
                 cursor.execute(query, val)
                 db.commit()
@@ -188,7 +188,7 @@ for link in pagelinks:
             else:
                 # Create the new active listing record
                 cursor = db.cursor()
-                query = "INSERT INTO active_listings_newtown SET propid = %s, price = %s, link = %s, lastscan = %s"
+                query = "INSERT INTO active_listings_rongotai SET propid = %s, price = %s, link = %s, lastscan = %s"
                 val = (activerecord[0][1], price, link, currenttime)
                 cursor.execute(query, val)
                 db.commit()
@@ -196,7 +196,7 @@ for link in pagelinks:
 
                 # Move the current active into the prior record table
                 cursor = db.cursor()
-                query = "INSERT INTO prior_listings_newtown SET propid = %s, price = %s, link = %s, timeadded = %s"
+                query = "INSERT INTO prior_listings_rongotai SET propid = %s, price = %s, link = %s, timeadded = %s"
                 val = (activerecord[0][1], price, link, currenttime)
                 cursor.execute(query, val)
                 db.commit()
@@ -204,7 +204,7 @@ for link in pagelinks:
 
                 # Delete the old one active one
                 cursor = db.cursor()
-                query = "DELETE FROM active_listings_newtown WHERE id = %s"
+                query = "DELETE FROM active_listings_rongotai WHERE id = %s"
                 val = (activerecord[0][0],)
                 cursor.execute(query, val)
                 db.commit()
@@ -215,7 +215,7 @@ for link in pagelinks:
             
             # Create the new active listing record
             cursor = db.cursor()
-            query = "INSERT INTO active_listings_newtown SET propid = %s, price = %s, link = %s, lastscan = %s"
+            query = "INSERT INTO active_listings_rongotai SET propid = %s, price = %s, link = %s, lastscan = %s"
             val = (propertyrecord[0][0], price, link, currenttime)
             cursor.execute(query, val)
             db.commit()
