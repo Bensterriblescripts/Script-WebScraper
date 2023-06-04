@@ -35,12 +35,13 @@ def fixrecords(query):
     db.commit()
     cursor.close()
 
-# TradeMe
 scanregions = ['crofton downs', 'johnsonville', 'khandallah', 'newlands', 'newtown', 'paparangi', 'raroa', 'rongotai', 'tawa']
+
+# TradeMe
 for setregion in scanregions:
     site = "trademe"
 
-    # Link changes on specific regions
+    # Link changes on regions with spaces
     if " " in setregion:
         fsetregion = setregion.replace(' ', '-')
         baseurl = "https://www.trademe.co.nz/a/property/residential/sale/wellington/wellington/" + fsetregion
