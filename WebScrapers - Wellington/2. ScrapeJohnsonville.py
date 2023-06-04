@@ -127,7 +127,7 @@ for link in pagelinks:
 
         # Create the new property record
         cursor = db.cursor()
-        query = "INSERT INTO propertylist_johnsonville SET addr = %s, suburb = %s, region = %s, city = %s, price = %s, active = 1"
+        query = "INSERT INTO propertylist_johnsonville SET addr = %s, suburb = %s, region = %s, city = %s, price = %s"
         val = (address, suburb, region, city, price)
         cursor.execute(query, val)
         db.commit()
@@ -151,17 +151,6 @@ for link in pagelinks:
 
     # If the property is known
     elif len(propertyrecord) > 0:
-
-        # Set the property to active
-        if propertyrecord[0][6] == 0:
-
-            # Only update the last scan time
-            cursor = db.cursor()
-            query = "UPDATE propertylist_johnsonville SET active = 1 WHERE id = %s"
-            val = (propertyrecord[0][0],)
-            cursor.execute(query, val)
-            db.commit()
-            cursor.close()
 
         # Get the active listing (if there is one)
         cursor = db.cursor()

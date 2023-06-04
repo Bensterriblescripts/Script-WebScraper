@@ -126,7 +126,7 @@ for link in pagelinks:
 
         # Create the new property record
         cursor = db.cursor()
-        query = "INSERT INTO propertylist_tawa SET addr = %s, suburb = %s, region = %s, city = %s, price = %s, active = 1"
+        query = "INSERT INTO propertylist_tawa SET addr = %s, suburb = %s, region = %s, city = %s, price = %s"
         val = (address, suburb, region, city, price)
         cursor.execute(query, val)
         db.commit()

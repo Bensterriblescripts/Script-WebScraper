@@ -28,16 +28,33 @@ def changerecords(query, val):
     cursor.execute(query, val)
     db.commit()
     cursor.close()
+# Query - No variables
+def fixrecords(query):
+    cursor = db.cursor()
+    cursor.execute(query)
+    db.commit()
+    cursor.close()
 
-# Regions to scan
-scanregions = ['croftondowns', 'johnsonville', 'khandallah', 'newlands', 'newtown', 'paparangi', 'raroa', 'rongotai', 'tawa']
+# TradeMe
+scanregions = ['crofton+downs', 'johnsonville', 'khandallah', 'newlands', 'newtown', 'paparangi', 'raroa', 'rongotai', 'tawa']
 for setregion in scanregions:
+    site = "trademe"
 
     # Link changes on specific regions
-    if setregion == 'croftondowns':
-        url = "https://www.trademe.co.nz/a/property/residential/sale/wellington/wellington/crofton-downs"
+    if "+" in setregion:
+        fsetregion = setregion.replace('+', '-')
+        baseurl = "https://www.trademe.co.nz/a/property/residential/sale/wellington/wellington/" + fsetregion
+        setregion = setregion.replace('+', '')
     else:
-        url = "https://www.trademe.co.nz/a/property/residential/sale/wellington/wellington/" + setregion
+        baseurl = "https://www.trademe.co.nz/a/property/residential/sale/wellington/wellington/" + setregion
+
+    # Create the tables if required
+    query = "CREATE TABLE IF NOT EXISTS propertylist_" + setregion + " (id INT AUTO_INCREMENT PRIMARY KEY, addr VARCHAR(255), suburb VARCHAR(45), region VARCHAR(45), city VARCHAR(45), price VARCHAR(255))"
+    fixrecords(query)
+    query = "CREATE TABLE IF NOT EXISTS active_listings_" + setregion + " (id INT AUTO_INCREMENT PRIMARY KEY, propid INT, price VARCHAR(45), link VARCHAR(255), site VARCHAR(45), lastscan INT)"
+    fixrecords(query)
+    query = "CREATE TABLE IF NOT EXISTS prior_listings_" + setregion + " (id INT AUTO_INCREMENT PRIMARY KEY, propid INT, price VARCHAR(45), link VARCHAR(255), site VARCHAR(45), timeadded INT)"
+    fixrecords(query)
 
     # Uses the Edge webdriver
     webdriver_service = Service('C:/Local/WebDriver/113.0.1774.57/msedgedriver.exe')
@@ -45,7 +62,7 @@ for setregion in scanregions:
     edge_options.add_argument("--headless")
     edge_options.add_argument("--log-level=3")
     driver = webdriver.Edge(service=webdriver_service, options=edge_options)
-    driver.get(url)
+    driver.get(baseurl)
     time.sleep(5)
     html_content = driver.page_source
 
@@ -64,7 +81,7 @@ for setregion in scanregions:
         pagelink = link.get("href")
         index = pagelink.find("?")
         slicedlink = pagelink[:index]
-        proplink = url + slicedlink
+        proplink = baseurl + slicedlink
         pagelinks.append(proplink)
 
     # Navigation page links
@@ -81,7 +98,7 @@ for setregion in scanregions:
 
     # Move onto the next page
     for navlinks in navigationlinks:
-        navurl = "https://www.trademe.co.nz/a/property/residential/sale/wellington/wellington/" + setregion + navlinks
+        navurl = baseurl + navlinks
         driver.get(navurl)
         time.sleep(5)
         html_content = driver.page_source
@@ -97,7 +114,7 @@ for setregion in scanregions:
             pagelink = link.get("href")
             index = pagelink.find("?")
             slicedlink = pagelink[:index]
-            proplink = url + slicedlink
+            proplink = baseurl + slicedlink
             pagelinks.append(proplink)
 
     # Loop through each property page
@@ -134,7 +151,7 @@ for setregion in scanregions:
             print("Price not listed")
 
         # Get any existing property record
-        query = "SELECT * FROM propertylist_{} WHERE addr = %s AND suburb = %s AND region = %s AND city = %s".format(setregion)
+        query = "SELECT * FROM propertylist_" + setregion + " WHERE addr = %s AND suburb = %s AND region = %s AND city = %s"
         val = (address, suburb, region, city)
         propertyrecord = getrecords(query, val)
 
@@ -142,78 +159,72 @@ for setregion in scanregions:
         if len(propertyrecord) == 0:
 
             # Create the new property record
-            query = "INSERT INTO propertylist_{} SET addr = %s, suburb = %s, region = %s, city = %s, price = %s".format(setregion)
+            query = "INSERT INTO propertylist_" + setregion + " SET addr = %s, suburb = %s, region = %s, city = %s, price = %s"
             val = (address, suburb, region, city, price)
             changerecords(query, val)
 
-            # Create the new property record ID
-            query = "SELECT * FROM propertylist_{} WHERE addr = %s AND suburb = %s AND region = %s AND city = %s".format(setregion)
-            val = (setregion, address, suburb, region, city)
+            # Get new property record ID
+            query = "SELECT * FROM propertylist_" + setregion + " WHERE addr = %s AND suburb = %s AND region = %s AND city = %s"
+            val = (address, suburb, region, city)
             newrecord = getrecords(query, val)
 
             # Create the new active listing record
-            query = "INSERT INTO active_listings_{} SET propid = %s, price = %s, link = %s, lastscan = %s".format(setregion)
-            val = (newrecord[0][0], price, link, currenttime)
+            query = "INSERT INTO active_listings_" + setregion + " SET propid = %s, price = %s, link = %s, site = %s, lastscan = %s"
+            val = (newrecord[0][0], price, link, site, currenttime)
             changerecords(query, val)
 
         # If the property is known
         elif len(propertyrecord) > 0:
 
             # Get the active listing (if there is one)
-            query = "SELECT * FROM active_listings_{} WHERE propid = %s".format(setregion)
-            val = (propertyrecord[0][0],)
+            query = "SELECT * FROM active_listings_" + setregion + " WHERE propid = %s AND site = %s"
+            val = (propertyrecord[0][0], site)
             activerecord = getrecords(query, val)
 
             # If there is an active listing
             if len(activerecord) > 0:
 
                 # Known listings
-                if activerecord[0][3] == link:
+                if activerecord[0][2] == price:
 
                     # Only update the last scan time
-                    query = "UPDATE active_listings_{} SET lastscan = %s WHERE id = %s".format(setregion)
+                    query = "UPDATE active_listings_" + setregion + " SET lastscan = %s WHERE id = %s"
                     val = (currenttime, activerecord[0][0])
                     changerecords(query, val)
 
                 # New listings
                 else:
                     # Create the new active listing record
-                    query = "INSERT INTO active_listings_{} SET propid = %s, price = %s, link = %s, lastscan = %s".format(setregion)
-                    val = (activerecord[0][1], price, link, currenttime)
+                    query = "INSERT INTO active_listings_" + setregion + " SET propid = %s, price = %s, link = %s, site = %s, lastscan = %s"
+                    val = (activerecord[0][1], price, link, site, currenttime)
                     changerecords(query,val)
 
             # If there is no active listing
             elif len(activerecord) == 0:
                 
                 # Create the new active listing record
-                query = "INSERT INTO active_listings_{} SET propid = %s, price = %s, link = %s, lastscan = %s".format(setregion)
-                val = (propertyrecord[0][0], price, link, currenttime)
+                query = "INSERT INTO active_listings_" + setregion + " SET propid = %s, price = %s, link = %s, site = %s, lastscan = %s"
+                val = (propertyrecord[0][0], price, link, site, currenttime)
                 changerecords(query, val)
 
     # Get existing listings older than 24 hours
     currenttime = time.time()
-    query = "SELECT * FROM active_listings_{} WHERE lastscan < %s".format(setregion)
+    query = "SELECT * FROM active_listings_" + setregion + " WHERE lastscan < %s"
     val = ((currenttime - 86400),)
     oldrecord = getrecords(query, val)
     if len(oldrecord) != 0:
         for record in oldrecord:
 
             # Move the current active into the prior record table
-            cursor = db.cursor()
-            query = "INSERT INTO prior_listings_{} SET propid = %s, price = %s, link = %s, timeadded = %s".format(setregion)
-            val = (record[1], record[2], record[3], currenttime)
-            cursor.execute(query, val)
-            db.commit()
-            cursor.close()
+            query = "INSERT INTO prior_listings_" + setregion + " SET propid = %s, price = %s, link = %s, site = %s, timeadded = %s"
+            val = (record[1], record[2], record[3], site, currenttime)
+            changerecords(query, val)
 
             # Delete the old active one
             cursor = db.cursor()
-            query = "DELETE FROM active_listings_{} WHERE id = %s".format(setregion)
+            query = "DELETE FROM active_listings_" + setregion + " WHERE id = %s"
             val = (record[0],)
-            cursor.execute(query, val)
-            db.commit()
-            cursor.close()
-
+            changerecords(query,val)
     else: 
         print("No records to clean")
 

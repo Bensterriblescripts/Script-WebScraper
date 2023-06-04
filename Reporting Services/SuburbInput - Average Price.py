@@ -1,17 +1,21 @@
 import mysql.connector
 import os
 import statistics
+import re
 
 # DB
 sqluser = os.environ["MYSQL_USER"]
 sqlpass = os.environ["MYSQL_PASS"]
-
 db = mysql.connector.connect(
     host = "localhost",
     user = sqluser,
     password = sqlpass,
     database = "prod_proplist"
 )
+
+# Get the region with no symbols, numbers, whitespace, or capital letters
+region = input("Enter a region: ")
+table = re.sub(r'[^a-zA-Z\s]', '', region).lower()
 
 def getAverages(table):
     # Import a suburb list later to streamline this
@@ -40,10 +44,8 @@ def getAverages(table):
     print("Median: ", medianjohnsonville)
     print("Average: ", averagejohnsonville, "\n")
 
-tables = ['johnsonville', 'khandallah', 'newlands', 'tawa', 'croftondowns', '']
-for table in tables:
-    tablename = table.capitalize()
-    print(tablename)
-    getAverages(table)
+tablename = table.capitalize()
+print(tablename)
+getAverages(table)
 
 db.close()
