@@ -35,7 +35,7 @@ def fixrecords(query):
     db.commit()
     cursor.close()
 
-scanregions = ['crofton downs', 'johnsonville', 'khandallah', 'newlands', 'newtown', 'paparangi', 'raroa', 'rongotai', 'tawa']
+scanregions = ['crofton downs', 'grenada', 'island bay', 'johnsonville', 'khandallah', 'newlands', 'newtown', 'ohariu', 'paparangi', 'raroa', 'rongotai', 'tawa']
 
 # TradeMe
 for setregion in scanregions:
@@ -45,6 +45,7 @@ for setregion in scanregions:
     if " " in setregion:
         fsetregion = setregion.replace(' ', '-')
         baseurl = "https://www.trademe.co.nz/a/property/residential/sale/wellington/wellington/" + fsetregion
+        dbregion = setregion
         setregion = setregion.replace(' ', '')
     else:
         baseurl = "https://www.trademe.co.nz/a/property/residential/sale/wellington/wellington/" + setregion
@@ -58,13 +59,13 @@ for setregion in scanregions:
     fixrecords(query)
 
     # Uses the Edge webdriver
-    webdriver_service = Service('C:/Local/WebDriver/113.0.1774.57/msedgedriver.exe')
+    webdriver_service = Service('C:/Local/WebDriver/114.0.1823.37/msedgedriver.exe')
     edge_options = Options()
     edge_options.add_argument("--headless")
     edge_options.add_argument("--log-level=3")
     driver = webdriver.Edge(service=webdriver_service, options=edge_options)
     driver.get(baseurl)
-    time.sleep(5)
+    time.sleep(3)
     html_content = driver.page_source
 
     # Parse HTML by class, store all the links
@@ -101,7 +102,7 @@ for setregion in scanregions:
     for navlinks in navigationlinks:
         navurl = baseurl + navlinks
         driver.get(navurl)
-        time.sleep(5)
+        time.sleep(3)
         html_content = driver.page_source
         soup = BeautifulSoup(html_content, "html.parser")
         tiles = "l-col l-col--has-flex-contents ng-star-inserted"
@@ -123,7 +124,7 @@ for setregion in scanregions:
         currenttime = time.time()
         print(link)
         driver.get(link)
-        time.sleep(5)
+        time.sleep(3)
         html_content = driver.page_source
         soup = BeautifulSoup(html_content, "html.parser")
 
@@ -133,11 +134,13 @@ for setregion in scanregions:
         location = htmllocation.get_text()
         print(location)
         locationsplit = location.split(", ")
-        address = locationsplit[0]
-        suburb = locationsplit[1]
-        region = locationsplit[2]
+        address = locationsplit[0].lower()
+        suburb = locationsplit[1].lower()
+        region = locationsplit[2].lower()
+        if dbregion != suburb:
+            continue
         if len(locationsplit) > 3:
-            city = locationsplit[3]
+            city = locationsplit[3].lower()
         else:
             city = ""
 
@@ -145,7 +148,9 @@ for setregion in scanregions:
         propvalue = soup.select('[data-th="Value"]')
         htmlprice = [pv.text for pv in propvalue if pv.text.strip().startswith('$')]
         if htmlprice:
-            price = htmlprice[0].strip("[]'")
+            arrayprice = htmlprice[0].strip("[]'")
+            commaprice = arrayprice.replace('$', '')
+            price = commaprice.replace(',', '')
             print(price)
         else:
             price = "Not Listed" 
